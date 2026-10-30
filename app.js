@@ -10,7 +10,7 @@ const API = (p, o) => fetch(API_BASE + p, {
   method: (o && o.method) || "GET",
   headers: { "Content-Type": "application/json", Authorization: "Bearer " + (state.token || "") },
   ...((o && o.body) ? { body: JSON.stringify(o.body) } : {}),
-}).then((r) => r.json()).catch((e) => ({ ok: false, error: "خطای شبکه — اتصال اینترنت را بررسی کنید" }));
+}).then((r) => r.json()).catch((e) => ({ ok: false, error: "خطای اتصال به سرور: " + (e && e.message ? e.message : "نامشخص") }));
 
 /* ================= i18n ================= */
 const I18N = {
@@ -296,7 +296,10 @@ $("#authGo").onclick = async () => {
     const name = $("#iName").value.trim();
     if (name.length < 2) return err(T("nameShort"));
     if ($("#iPass2").value !== pass) return err(T("passMismatch"));
-    const r = await API("/register", { method: "POST", body: { name, ident, password: pass, mid: $("#iMid").value.trim() } });
+    let midRaw = $("#iMid").value.trim().toLowerCase().replace(/\s+/g, "");
+    midRaw = midRaw.replace(/[^a-z0-9_@]/g, "");
+    if (midRaw && !midRaw.startsWith("mo")) midRaw = "mo" + midRaw;
+    const r = await API("/register", { method: "POST", body: { name, ident, password: pass, mid: midRaw } });
     if (!r.ok) return err(r.error || T("err"));
     enter(r);
   } else {
