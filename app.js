@@ -1,11 +1,16 @@
 /* ============ Morse frontend v1.2 — bilingual · svg icons · profile photos ============ */
 const $ = (s) => document.querySelector(s);
 const API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.endsWith(".pythonanywhere.com")) ? "/api" : "https://morseapp.pythonanywhere.com/api";
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
 const API = (p, o) => fetch(API_BASE + p, {
   method: (o && o.method) || "GET",
   headers: { "Content-Type": "application/json", Authorization: "Bearer " + (state.token || "") },
   ...((o && o.body) ? { body: JSON.stringify(o.body) } : {}),
-}).then((r) => r.json());
+}).then((r) => r.json()).catch((e) => ({ ok: false, error: "خطای شبکه — اتصال اینترنت را بررسی کنید" }));
 
 /* ================= i18n ================= */
 const I18N = {
@@ -168,7 +173,7 @@ const I18N = {
     errGeneric: "Error",
   },
 };
-let lang = localStorage.getItem("morse_lang") || "fa";
+let lang = store.get("morse_lang") || "fa";
 const T = (k, sub) => {
   let s = I18N[lang] && I18N[lang][k] != null ? I18N[lang][k] : (I18N.fa[k] != null ? I18N.fa[k] : k);
   if (sub) for (const [a, b] of Object.entries(sub)) s = s.split("__" + a + "__").join(b);
@@ -197,12 +202,12 @@ function applyLang() {
 }
 
 function setLang(l) {
-  lang = l; localStorage.setItem("morse_lang", l);
+  lang = l; store.set("morse_lang", l);
   applyLang();
 }
 
 let state = {
-  token: localStorage.getItem("morse_token") || "",
+  token: store.get("morse_token") || "",
   me: null, users: [], groups: [], peer: null, gpeer: null, view: "chats",
   filter: "all", q: "", peerUser: null, poll: null, lastId: 0, mute: false,
   gname: null, pendingIdent: "", mode: "dm",
@@ -307,7 +312,7 @@ $("#iMid").addEventListener("keydown", (e) => e.key === "Enter" && $("#authGo").
 
 function enter(r) {
   state.token = r.token; state.me = r.user;
-  localStorage.setItem("morse_token", r.token);
+  store.set("morse_token", r.token);
   $("#auth").style.display = "none";
   $("#app").classList.add("on");
   renderMe();
@@ -327,7 +332,7 @@ $("#logoutBtn").onclick = () => openSettings(); // topbar gear removed; keep chi
 $("#meChip").onclick = () => openSettings();
 $("#logoutBtn2").onclick = () => modal(T("logoutTitle"), T("logoutText"), [
   { label: T("cancel"), cls: "ghost" },
-  { label: T("logoutBtn"), cls: "red", fn: () => { localStorage.removeItem("morse_token"); location.reload(); } },
+  { label: T("logoutBtn"), cls: "red", fn: () => { store.del("morse_token"); location.reload(); } },
 ]);
 
 /* language buttons */
@@ -870,7 +875,7 @@ applyLang();
 if (state.token) {
   API("/me").then((r) => {
     if (r.ok) { enter({ ...r, token: state.token }); }
-    else { localStorage.removeItem("morse_token"); setAuthMode("login"); }
+    else { store.del("morse_token"); setAuthMode("login"); }
   });
 } else {
   setAuthMode("login");
